@@ -1,6 +1,6 @@
 # ✨ 3D Particle Magic
 
-![Magic Particle Fingers Demo](demo.gif)
+![Magic Particle Fingers Demo](Demo.gif)
 
 An interactive 3D WebGL particle system driven by AI hand-tracking, featuring smooth scaling, custom physics boundaries, and gesture-controlled explosions.
 *(توضیحات فارسی در پایین صفحه)*
