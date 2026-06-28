@@ -1,3 +1,10 @@
+<p align="center">
+  <img src="https://img.shields.io/badge/LANGUAGE-JAVASCRIPT-f7df1e?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
+  <img src="https://img.shields.io/badge/3D_ENGINE-THREE.JS-black?style=for-the-badge&logo=three.js&logoColor=white" alt="Three.js" />
+  <img src="https://img.shields.io/badge/AI_ENGINE-MEDIAPIPE-00c2a8?style=for-the-badge" alt="MediaPipe" />
+  <img src="https://img.shields.io/badge/LICENSE-MIT-brightgreen?style=for-the-badge" alt="MIT License" />
+</p>
+
 # ✨ 3D Particle Magic
 
 ![Magic Particle Fingers Demo](Demo.gif)
@@ -13,16 +20,33 @@ An interactive 3D WebGL particle system driven by AI hand-tracking, featuring sm
 After choosing your custom background and magic color from the UI menu, hold your hand in front of the camera:
 * **Two Hands Distance:** Dynamically scales the particle sphere (`↔️ Smooth Scaling`).
 * **One Finger Pointing (Index Up):** Rotates the 3D particle system based on your finger movement (`☝🏻 Rotation Control`).
-* **Fist (All Fingers Down):** Triggers a cosmic Big Bang! The particles explode, obeying boundary physics and bouncing off the screen walls (`💥 Particle Explosion`).
+* **Fist (All Fingers Down):** Triggers a cosmic Big Bang! The particles explode, bouncing off the screen walls (`💥 Particle Explosion`).
 * **Open Hand (All Fingers Up):** Recovers the scattered matter, bringing particles back to their original 3D sphere shape (`🔄 Quantum Reset`).
 
 ## 🇮🇷 توضیحات فارسی
-این پروژه یک شبیه‌ساز فیزیک ذرات سه‌بعدی در محیط WebGL است که با کتابخانه Three.js توسعه یافته است. کاربر ابتدا در یک منوی تعاملی جذاب، نوع پس‌زمینه (دوربین یا مشکی) و رنگ جادوی خود را انتخاب می‌کند و سپس با حرکات دست، کنترل این جهان سه‌بعدی را به دست می‌گیرد.
+این پروژه یک شبیه‌ساز فیزیک ذرات سه‌بعدی در محیط WebGL است. کاربر ابتدا در یک منوی تعاملی جذاب، نوع پس‌زمینه و رنگ جادوی خود را انتخاب می‌کند و سپس با حرکات دست، کنترل این جهان سه‌بعدی را به دست می‌گیرد.
+* **تغییر سایز دو دستی:** با دور و نزدیک کردن دو دست، کل سیستم ذرات مقیاس‌دهی می‌شود.
+* **انفجار و فیزیک برخورد:** با مشت کردن دست، ذرات با سرعت منفجر شده و پس از برخورد به دیواره‌های فرضی صفحه سه‌بعدی، به زیبایی کمانه می‌کنند (Wall Bounce).
 
-* **تغییر سایز دو دستی:** با دور و نزدیک کردن دو دست، کل سیستم ذرات بزرگ و کوچک می‌شود.
-* **چرخش ماتریکسی:** با اشاره انگشت سبابه، می‌توانید کره ذرات را در فضا بچرخانید.
-* **انفجار و فیزیک برخورد:** با مشت کردن دست، ذرات با سرعت منفجر شده و پس از برخورد به دیواره‌های فرضی صفحه سه‌بعدی، به زیبایی کمانه می‌کنند (Wall Bounce). با باز کردن مجدد دست، ذرات به فرم کروی خود بازمی‌گردند.
-* **حریم خصوصی:** تمام پردازش‌های هوش مصنوعی مستقیماً روی مرورگر (لوکال) انجام می‌شود و هیچ ویدیویی ذخیره یا به سروری ارسال نمی‌گردد.
+---
+
+## 🔬 Technical Breakdown / تشریح فنی پروژه
+
+### 🇬🇧 English Description
+This project leverages WebGL and custom physics mathematics to handle thousands of particles in real-time. It demonstrates core computer graphics and engine architecture principles:
+
+* **Hardware-Accelerated WebGL Rendering:** Utilizing Three.js to render over 3,000 individual particles at a smooth 60FPS using GPU acceleration and `AdditiveBlending` for glow effects.
+* **Custom Particle Physics & Collisions:** Implemented a custom physics loop to calculate explosive velocities, momentum dampening, and boundary collision detection (wall bouncing) within the 3D projection space.
+* **Multi-Hand Matrix Transformations:** Calculates real-time Euclidean distance between two hands for dynamic spatial scaling, alongside pointer tracking for mapping 2D hand coordinates to 3D matrix rotations.
+
+### 🇮🇷 توضیحات فارسی
+این پروژه نمایشی از پیاده‌سازی اصول گرافیک کامپیوتری، محاسبات فیزیک سفارشی و معماری موتورهای رندرینگ تحت وب است:
+
+* **رندرینگ شتاب‌یافته سخت‌افزاری (WebGL):** استفاده از کتابخانه Three.js برای رندر همزمان بیش از ۳۰۰۰ ذره با نرخ ۶۰ فریم بر ثانیه با بهره‌گیری از قدرت پردازنده گرافیکی (GPU) و افکت‌های نوری تجمعی.
+* **فیزیک ذرات و سیستم برخورد:** پیاده‌سازی حلقه فیزیک اختصاصی برای محاسبه سرعت، تکانه (Momentum) و تشخیص برخورد با دیواره‌های فضای سه‌بعدی صفحه نمایش (Wall Bouncing) در زمان انفجار.
+* **ماتریس تبدیلات چنددستی:** محاسبه در لحظه فاصله اقلیدسی بین دو دست برای مقیاس‌دهی فضایی نرم (Smooth Scaling)، در کنار نگاشت مختصات دوبعدی دست به چرخش‌های ماتریسی در فضای سه‌بعدی.
+
+---
 
 ## 🛠️ Tech Stack
 * HTML5 / CSS3 & Modern UI Architecture
@@ -36,4 +60,6 @@ To run this project locally, use a local server due to browser security restrict
 * **Python:** Run `python -m http.server` in your terminal.
 
 ## 📫 Get In Touch
+I'm an independent game developer and tech enthusiast. Whether it's discussing Unreal Engine 5.7 mechanics, collaborating on new business ventures, or just geeking out over hardware and code, I'd love to connect!
+
 * **Email:** msyhan85@gmail.com
