@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Particle Magic | جادوی ذرات سه‌بعدی</title>
+    <style>
+        /* General Styles | استایل‌های پایه */
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: white; }
+        
+        /* Video & Canvas Elements | عناصر ویدیو و بوم رسم */
+        #webcam-video {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            object-fit: cover; z-index: -2; transform: scaleX(-1); transition: opacity 0.5s ease;
+        }
+        #skeleton-canvas {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            object-fit: cover; z-index: -1; transform: scaleX(-1); pointer-events: none;
+        }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        
+        /* Information Overlay | لایه متن راهنما */
+        #info-overlay {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.7); padding: 12px 24px; border-radius: 12px;
+            pointer-events: none; text-align: center; z-index: 10; backdrop-filter: blur(5px); 
+            font-size: 15px; display: none; line-height: 1.5;
+        }
+
+        /* UI Menus | منوهای رابط کاربری */
+        #ui-menu-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); z-index: 20; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(10px); transition: opacity 0.5s ease;
+        }
+        .menu-box {
+            text-align: center; background: rgba(255, 255, 255, 0.1); padding: 40px;
+            border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .menu-box h2 { margin-top: 0; font-size: 24px; margin-bottom: 30px; line-height: 1.4; }
+        .menu-box h2 span { font-size: 18px; color: #aaa; font-weight: normal; }
+        
+        /* Buttons | دکمه‌ها */
+        .btn-group { display: flex; gap: 20px; justify-content: center; }
+        .menu-btn {
+            background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3);
+            padding: 15px 30px; border-radius: 10px; font-size: 16px; cursor: pointer;
+            transition: all 0.3s; line-height: 1.4;
+        }
+        .menu-btn:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
+        
+        /* Color Palette | پالت رنگ‌ها */
+        .color-palette { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; max-width: 300px; margin: 0 auto; }
+        .color-circle {
+            width: 50px; height: 50px; border-radius: 50%; cursor: pointer;
+            border: 3px solid transparent; transition: all 0.2s;
+        }
+        .color-circle:hover { transform: scale(1.1); border-color: white; }
+
+        /* Hide elements utility | کلاس مخفی کردن */
+        .hidden { display: none !important; }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <video id="webcam-video" autoplay playsinline></video>
+    <canvas id="skeleton-canvas" width="1280" height="720"></canvas>
+    <div id="canvas-container"></div>
+    <div id="info-overlay">Loading AI... | در حال بارگذاری هوش مصنوعی... ⏳</div>
+
+    <div id="ui-menu-container">
+        
+        <div id="menu-1" class="menu-box">
+            <h2>Select Background<br><span>پس‌زمینه را انتخاب کنید</span></h2>
+            <div class="btn-group">
+                <button class="menu-btn" onclick="selectBackground('camera')">Camera<br>دوربین</button>
+                <button class="menu-btn" onclick="selectBackground('black')">Black<br>مشکی خالص</button>
+            </div>
+        </div>
+
+        <div id="menu-2" class="menu-box hidden">
+            <h2>Choose Magic Color<br><span>رنگ جادو را انتخاب کنید</span></h2>
+            <div class="color-palette">
+                <div class="color-circle" style="background: #00ffff; box-shadow: 0 0 15px #00ffff;" onclick="selectColor('#00ffff')"></div>
+                <div class="color-circle" style="background: #ff00ff; box-shadow: 0 0 15px #ff00ff;" onclick="selectColor('#ff00ff')"></div>
+                <div class="color-circle" style="background: #00ff00; box-shadow: 0 0 15px #00ff00;" onclick="selectColor('#00ff00')"></div>
+                <div class="color-circle" style="background: #ffd700; box-shadow: 0 0 15px #ffd700;" onclick="selectColor('#ffd700')"></div>
+                <div class="color-circle" style="background: #ff3333; box-shadow: 0 0 15px #ff3333;" onclick="selectColor('#ff3333')"></div>
+                <div class="color-circle" style="background: #5555ff; box-shadow: 0 0 15px #5555ff;" onclick="selectColor('#5555ff')"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // UI Menu Logic | منطق منوهای کاربری
+        // ==========================================
+        let appColor = '#00ffff'; // Default color | رنگ پیش‌فرض
+        const videoElement = document.getElementById('webcam-video');
+        
+        // Step 1: Select Background | مرحله اول: انتخاب پس‌زمینه
+        function selectBackground(type) {
+            if (type === 'black') {
+                videoElement.style.opacity = '0'; // Hide video, keep tracking | مخفی کردن ویدیو، ادامه ردیابی
+            } else {
+                videoElement.style.opacity = '1';
+            }
+            document.getElementById('menu-1').classList.add('hidden');
+            document.getElementById('menu-2').classList.remove('hidden');
+        }
+
+        // Step 2: Select Color and Start | مرحله دوم: انتخاب رنگ و شروع
+        function selectColor(hex) {
+            appColor = hex;
+            // Update 3D Material Color | تغییر رنگ متریال سه‌بعدی
+            material.color.set(hex);
+            
+            // Hide Menu & Show Info | مخفی کردن منو و نمایش راهنما
+            document.getElementById('ui-menu-container').style.opacity = '0';
+            setTimeout(() => { 
+                document.getElementById('ui-menu-container').classList.add('hidden'); 
+                document.getElementById('info-overlay').style.display = 'block';
+            }, 500);
+            
+            // Start Camera & AI | راه‌اندازی دوربین و هوش مصنوعی
+            cameraUtils.start();
+        }
+
+        // ==========================================
+        // 1. 3D Setup & Physics | ۱. تنظیمات سه‌بعدی و فیزیک
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        container.appendChild(renderer.domElement);
+
+        // Screen Boundaries for Collisions | لبه‌های صفحه برای برخوردها
+        let boundX, boundY;
+        function updateBounds() {
+            const vFov = camera.fov * Math.PI / 180;
+            boundY = 2 * Math.tan(vFov / 2) * camera.position.z / 2;
+            boundX = boundY * camera.aspect;
+        }
+        updateBounds();
+
+        const particleCount = 3000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const velocities = new Float32Array(particleCount * 3);
+        const homePositions = new Float32Array(particleCount * 3); // For Reset | برای بازنشانی
+
+        const radius = 1.5;
+        for (let i = 0; i < particleCount; i++) {
+            const theta = Math.random() * 2 * Math.PI;
+            const phi = Math.acos((Math.random() * 2) - 1);
+            
+            const x = radius * Math.sin(phi) * Math.cos(theta);
+            const y = radius * Math.sin(phi) * Math.sin(theta);
+            const z = radius * Math.cos(phi);
+
+            positions[i * 3] = x; positions[i * 3 + 1] = y; positions[i * 3 + 2] = z;
+            homePositions[i * 3] = x; homePositions[i * 3 + 1] = y; homePositions[i * 3 + 2] = z;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const material = new THREE.PointsMaterial({
+            color: appColor, // Uses default initially | از رنگ پیش‌فرض استفاده می‌کند
+            size: 0.04, transparent: true,
+            opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false
+        });
+
+        const particleSystem = new THREE.Points(geometry, material);
+        scene.add(particleSystem);
+
+        // State Variables | متغیرهای وضعیت
+        let isExploded = false;
+        let isResetting = false;
+        let targetScale = 1.0;
+        let currentScale = 1.0;
+        
+        let pointerActive = false;
+        let lastPointerPos = { x: 0, y: 0 };
+
+        // Animation Loop | حلقه انیمیشن
+        function animate() {
+            requestAnimationFrame(animate);
+            const posAttr = geometry.attributes.position;
+            const arr = posAttr.array;
+
+            // Smooth Scaling | بزرگ‌نمایی نرم
+            currentScale += (targetScale - currentScale) * 0.1;
+            particleSystem.scale.set(currentScale, currentScale, currentScale);
+
+            if (isResetting) {
+                // Return to Sphere | بازگشت به شکل کره
+                let allDone = true;
+                for (let i = 0; i < particleCount; i++) {
+                    arr[i * 3] += (homePositions[i * 3] - arr[i * 3]) * 0.08;
+                    arr[i * 3 + 1] += (homePositions[i * 3 + 1] - arr[i * 3 + 1]) * 0.08;
+                    arr[i * 3 + 2] += (homePositions[i * 3 + 2] - arr[i * 3 + 2]) * 0.08;
+                    
+                    velocities[i * 3] = 0; velocities[i * 3 + 1] = 0; velocities[i * 3 + 2] = 0;
+                    if (Math.abs(homePositions[i * 3] - arr[i * 3]) > 0.05) allDone = false;
+                }
+                posAttr.needsUpdate = true;
+                if (allDone) isResetting = false;
+                particleSystem.rotation.y += 0.01;
+
+            } else if (isExploded) {
+                // Explosion Physics & Wall Bounces | فیزیک انفجار و برخورد به دیوار
+                for (let i = 0; i < particleCount; i++) {
+                    arr[i * 3] += velocities[i * 3];
+                    arr[i * 3 + 1] += velocities[i * 3 + 1];
+                    arr[i * 3 + 2] += velocities[i * 3 + 2];
+
+                    if (arr[i * 3] > boundX || arr[i * 3] < -boundX) {
+                        velocities[i * 3] *= -0.8; arr[i * 3] = Math.sign(arr[i * 3]) * boundX;
+                    }
+                    if (arr[i * 3 + 1] > boundY || arr[i * 3 + 1] < -boundY) {
+                        velocities[i * 3 + 1] *= -0.8; arr[i * 3 + 1] = Math.sign(arr[i * 3 + 1]) * boundY;
+                    }
+                    if (arr[i * 3 + 2] > 2 || arr[i * 3 + 2] < -5) velocities[i * 3 + 2] *= -0.8;
+
+                    velocities[i * 3] *= 0.99; velocities[i * 3 + 1] *= 0.99; velocities[i * 3 + 2] *= 0.99;
+                }
+                posAttr.needsUpdate = true;
+            } else if (!pointerActive) {
+                // Idle Rotation | چرخش در حالت عادی
+                particleSystem.rotation.y += 0.003;
+                particleSystem.rotation.x += 0.001;
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            updateBounds();
+        });
+
+        // ==========================================
+        // 2. AI Hand Tracking | ۲. ردیابی دست با هوش مصنوعی
+        // ==========================================
+        const info = document.getElementById('info-overlay');
+        const skeletonCanvas = document.getElementById('skeleton-canvas');
+        const skeletonCtx = skeletonCanvas.getContext('2d');
+
+        const hands = new Hands({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+        }});
+        hands.setOptions({
+            maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7
+        });
+
+        // Gestures Definitions | تعریف ژست‌های دست
+        function isPointing(landmarks) { // Index up | انگشت اشاره بالا
+            return landmarks[8].y < landmarks[6].y && landmarks[12].y > landmarks[10].y && 
+                   landmarks[16].y > landmarks[14].y && landmarks[20].y > landmarks[18].y;
+        }
+
+        function isFist(landmarks) { // All fingers down | دست مشت شده
+            return landmarks[8].y > landmarks[6].y && landmarks[12].y > landmarks[10].y && 
+                   landmarks[16].y > landmarks[14].y && landmarks[20].y > landmarks[18].y;
+        }
+
+        function isOpenHand(landmarks) { // All fingers up | دست باز (کف دست)
+            return landmarks[8].y < landmarks[6].y && landmarks[12].y < landmarks[10].y && 
+                   landmarks[16].y < landmarks[14].y && landmarks[20].y < landmarks[18].y;
+        }
+
+        hands.onResults((results) => {
+            skeletonCtx.clearRect(0, 0, skeletonCanvas.width, skeletonCanvas.height);
+            
+            if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                pointerActive = false;
+                if (!isExploded && !isResetting) info.innerHTML = "Show your hand 🖐🏻<br>دستت رو بیار تو کادر";
+                return;
+            }
+
+            // Draw Skeleton with Selected Color | رسم اسکلت با رنگ انتخاب شده
+            for (const landmarks of results.multiHandLandmarks) {
+                drawConnectors(skeletonCtx, landmarks, HAND_CONNECTIONS, {color: appColor, lineWidth: 3});
+                drawLandmarks(skeletonCtx, landmarks, {color: '#FFFFFF', lineWidth: 1, radius: 3});
+            }
+
+            const numHands = results.multiHandLandmarks.length;
+
+            if (numHands === 2 && !isExploded && !isResetting) {
+                // Two Hands: Scale | دو دست: تغییر سایز
+                const hand1 = results.multiHandLandmarks[0][9];
+                const hand2 = results.multiHandLandmarks[1][9];
+                const dist = Math.sqrt(Math.pow(hand1.x - hand2.x, 2) + Math.pow(hand1.y - hand2.y, 2));
+                
+                targetScale = Math.max(0.3, dist * 1.5); 
+                info.innerHTML = "Scaling ↔️<br>در حال تغییر سایز";
+                pointerActive = false;
+            } 
+            else if (numHands === 1) {
+                const landmarks = results.multiHandLandmarks[0];
+
+                if (!isExploded && !isResetting) {
+                    if (isPointing(landmarks)) {
+                        // Pointing: Rotate | اشاره: چرخش
+                        const ptrX = landmarks[8].x;
+                        const ptrY = landmarks[8].y;
+                        
+                        if (!pointerActive) {
+                            lastPointerPos = { x: ptrX, y: ptrY };
+                            pointerActive = true;
+                        }
+
+                        const deltaX = ptrX - lastPointerPos.x;
+                        const deltaY = ptrY - lastPointerPos.y;
+                        
+                        particleSystem.rotation.y += deltaX * 6;
+                        particleSystem.rotation.x += deltaY * 6;
+
+                        lastPointerPos = { x: ptrX, y: ptrY };
+                        info.innerHTML = "Rotating ☝🏻<br>کنترل چرخش با انگشت";
+                    }
+                    else if (isFist(landmarks)) {
+                        // Fist: Explode | مشت: انفجار
+                        isExploded = true;
+                        pointerActive = false;
+                        targetScale = 1.0;
+                        info.innerHTML = "BOOM! 💥 (Open hand to reset)<br>بومممم! (برای بازگشت، دستت رو کامل باز کن)";
+                        
+                        for (let i = 0; i < particleCount; i++) {
+                            velocities[i * 3] = (Math.random() - 0.5) * 1.2;
+                            velocities[i * 3 + 1] = (Math.random() - 0.5) * 1.2;
+                            velocities[i * 3 + 2] = (Math.random() - 0.5) * 1.2;
+                        }
+                    } else {
+                        // Idle | حالت عادی
+                        pointerActive = false;
+                        targetScale = 1.0;
+                        info.innerHTML = "Idle 🖐🏻 (Fist to explode)<br>حالت عادی (مشت کن تا منفجر بشه)";
+                    }
+                } 
+                else if (isExploded) {
+                    // Open Hand: Reset | دست باز: ریست
+                    if (isOpenHand(landmarks)) {
+                        isExploded = false;
+                        isResetting = true;
+                        info.innerHTML = "Resetting... 🔄<br>در حال بازگردانی...";
+                    }
+                }
+            }
+        });
+
+        // Initialize Camera Utility | متغیر دوربین آماده‌سازی می‌شود اما استارت آن در منو زده می‌شود
+        const cameraUtils = new Camera(videoElement, {
+            onFrame: async () => { await hands.send({image: videoElement}); },
+            width: 1280, height: 720
+        });
+
+    </script>
+</body>
+</html>
